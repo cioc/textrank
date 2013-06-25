@@ -1,3 +1,100 @@
+TextRank in Go
+==============
+
+This is an implementation of the TextRank algorithm in Go.  TextRank is a graph based method for ranking text e.g. 
+finding the most important sentences or words within a document.  I wrote this in order to learn Go. 
+
+More information on TextRank can be found in this paper : http://acl.ldc.upenn.edu/acl2004/emnlp/pdf/Mihalcea.pdf
+
+The Package
+===========
+
+The package consists of two parts:
+
+* a simple graph data structure
+* the TextRank Algorithm 
+
+graph.go
+--------
+
+This is where we implement our graph data structure. 
+
+```go
+//vertices are integers
+type Vertex int
+
+//edges are always directed and weighted 
+//edges are stored in lists indexed by their starting point; so we only store where the edge points to
+type Edge struct {
+  to Vertex
+  weight float64
+}
+
+//we store two maps - one that maps inbound edges to each vertex and one outbound edges from each vertex
+//we use this approach in order to have fast edges in and edges out queries for each vertex 
+type Graph struct {
+  vertexCount Vertex
+  maxVertex int
+  OutBoundEdges map[Vertex][]Edge //Out(V) queries
+  InBoundEdges map[Vertex][]Edge  //In(V) queries
+}
+```
+
+For textrank, i wanted fast edges in and edges out of each node lookups without using a matrix representation of the graph.  
+I will be refining this to work on far larger graphs, so matrix representations are out. 
+
+Graphs also have a few helper functions:
+
+```go
+func (g *Graph) AddVertex() (Vertex)
+
+func (g *Graph) VertexCount() (int)
+
+func (g *Graph) AddEdge(from Vertex, to Vertex, weight float64)
+
+func (g *Graph) In(v Vertex) ([]Edge)
+
+func (g *Graph) Out(v Vertex) ([]Edge)
+
+func (g *Graph) Weight(from Vertex, to Vertex) (weight float64, e error)
+```
+
+
+textrank.go
+-----------
+
+The most important function is Iterate, the actual implementation of TextRank:
+
+```go
+func Iterate(d float64, oldScores []float64, g *Graph) ([]float64)
+```
+
+Iterate takes a param d (d=.85 in the paper) along with a vector of vertex scores and graph.  It returns an updated vector of scores based on the graph using the TextRank algorithm.
+
+
+The following are a few helper functions:
+
+```go
+//this is useful for checking for convergence
+func ScoreDiff(s1 []float64, s2 []float64) (float64)
+
+//pair indices and score for sorting
+type IndexScorePair struct {
+  Index int
+  Score float64
+}
+
+func Sort(pairs []IndexScorePair)
+
+```
+
+Example
+=======
+
+The following example uses TextRank on the sentences of a state of the union address to determine the most 'important' sentences.
+
+
+```go
 package main
 
 //rough implementation of: http://acl.ldc.upenn.edu/acl2004/emnlp/pdf/Mihalcea.pdf
@@ -88,3 +185,4 @@ func main() {
     fmt.Printf("%v : %v, : %v\n", pairs[i].Index, pairs[i].Score, omap[textrank.Vertex(pairs[i].Index)])
   }
 }
+```
